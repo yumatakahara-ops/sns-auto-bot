@@ -1,0 +1,52 @@
+name: Auto Post to X and Threads
+
+on:
+  schedule:
+    - cron: "0 0 * * *"
+    - cron: "0 4 * * *"
+    - cron: "0 9 * * *"
+    - cron: "0 12 * * *"
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "true にするとAPIに実際は投稿せず内容だけ確認できます"
+        required: false
+        default: "false"
+
+permissions:
+  contents: write
+
+jobs:
+  post:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run posting script
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          X_API_KEY: ${{ secrets.X_API_KEY }}
+          X_API_SECRET: ${{ secrets.X_API_SECRET }}
+          X_ACCESS_TOKEN: ${{ secrets.X_ACCESS_TOKEN }}
+          X_ACCESS_SECRET: ${{ secrets.X_ACCESS_SECRET }}
+          THREADS_ACCESS_TOKEN: ${{ secrets.THREADS_ACCESS_TOKEN }}
+          THREADS_USER_ID: ${{ secrets.THREADS_USER_ID }}
+          DRY_RUN: ${{ github.event.inputs.dry_run || 'false' }}
+        run: python main.py
+
+      - name: Commit updated history file
+        run: |
+          git config user.name "auto-post-bot"
+          git config user.email "actions@github.com"
+          git add posted_history.json
+          git diff --staged --quiet || git commit -m "Update posted history [skip ci]"
+          git push
