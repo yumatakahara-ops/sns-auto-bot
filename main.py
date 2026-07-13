@@ -71,7 +71,7 @@ def generate_post(history):
 
     recent_topics = "\n".join(f"- {h['x_text']}" for h in history[-10:]) or "(まだ投稿履歴なし)"
 
-    # 投稿ローテーション: 4投稿に1本は「実験枠」（いつもと違う切り口を試す）
+    # 投稿ローテーション: 4投稿に1本は「実験枠」（トレンド・競合を調べて書く）
     post_number = len(history)
     is_experimental = (post_number % 4 == 3)
 
@@ -125,7 +125,7 @@ def generate_post(history):
 
     response = client.messages.create(
         model=config.CLAUDE_MODEL,
-        max_tokens=2000,
+        max_tokens=4096,
         messages=[{"role": "user", "content": prompt}],
     )
 
