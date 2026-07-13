@@ -6,7 +6,9 @@
     "x_posted": true,
     "threads_posted": false,
     "x_id": "dry_run_id",
-    "threads_id": null
+    "threads_id": null,
+    "x_metrics": null,
+    "threads_metrics": null
   },
   {
     "timestamp": "2026-07-12T13:42:13.051969",
@@ -15,6 +17,14 @@
     "x_posted": true,
     "threads_posted": false,
     "x_id": "2076301101003853887",
-    "threads_id": null
+    "threads_id": null,
+    "x_metrics": {
+      "likes": 0,
+      "retweets": 0,
+      "quotes": 0,
+      "replies": 0,
+      "impressions": 0
+    },
+    "threads_metrics": null
   }
 ]
