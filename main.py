@@ -71,9 +71,34 @@ def generate_post(history):
 
     recent_topics = "\n".join(f"- {h['x_text']}" for h in history[-10:]) or "(まだ投稿履歴なし)"
 
+    # 投稿ローテーション: 4投稿に1本は「実験枠」（トレンド・競合を調べて書く）
+    post_number = len(history)
+    is_experimental = (post_number % 4 == 3)
+
+    # 長文・短文を交互に
+    length_mode = "長文" if post_number % 2 == 0 else "短文"
+    length_instruction = (
+        "長文モード：箇条書きや改行を使い、背景説明や具体例も交えてしっかり書き込む投稿にしてください。"
+        if length_mode == "長文" else
+        "短文モード：要点を1〜2行に絞り、テンポよく読める短い投稿にしてください。"
+    )
+
+    if is_experimental:
+        mode_instruction = """
+今回は「実験枠」の投稿です。以下を踏まえて、いつもの型とは少し違う切り口で書いてください。
+- 直近のトレンドニュースや話題になっているキャリア・転職関連の出来事があれば触れる
+- 同ジャンルで人気のアカウントがどんな投稿で反応を得ているか踏まえ、参考になる要素があれば取り入れる
+  （ただし他アカウント名や引用は出さない。あくまで参考にして自分の言葉で書く）
+- 定番の型に縛られず、新しい切り口・フォーマットを試してよい
+"""
+        tools = [{"type": "web_search_20250305", "name": "web_search", "max_uses": 3}]
+    else:
+        mode_instruction = "今回は「定番枠」の投稿です。テーマ内で定義されている型（求人票の翻訳・エージェントの裏側・勘違いの訂正など）から1つ選んで書いてください。"
+        tools = None
+
     prompt = f"""あなたはSNS運用担当です。以下の条件でX(Twitter)とThreads向けの投稿文をそれぞれ作成してください。
 
-# テーマ・ターゲット
+# テーマ・ターゲット・裏コンセプト
 {config.THEME}
 
 # トーン
@@ -82,24 +107,39 @@ def generate_post(history):
 # ガードレール（厳守）
 {config.GUARDRAILS}
 
+# 今回の投稿タイプ
+{mode_instruction}
+
+# 今回のフォーマット指示
+{length_instruction}
+
 # 直近の投稿ネタ（このネタとは違う切り口・話題にすること）
 {recent_topics}
 
 # 出力ルール
 - X用は{config.X_MAX_CHARS}文字以内、Threads用は{config.THREADS_MAX_CHARS}文字以内
-- X用は簡潔に。Threads用はX用と同じ話題でもう少し詳しく・会話的に書いてよい
+- X用とThreads用は同じ話題・同じ切り口で、文章の書き方だけ少し変えてよい（Threadsの方がやや会話的でもよい）
+- 最初の一文は必ず、読者の目を引くフックにすること
 - 必ず以下のJSON形式のみで出力すること。前置きや説明文、コードブロック記号（```）は一切つけないこと。
+  Web検索を使った場合も、検索結果の文章をそのまま引用せず、必ず自分の言葉で書き直すこと。
 
 {{"x_text": "Xに投稿する文章", "threads_text": "Threadsに投稿する文章"}}
 """
 
-    response = client.messages.create(
-        model=config.CLAUDE_MODEL,
-        max_tokens=1000,
-        messages=[{"role": "user", "content": prompt}],
-    )
+    create_kwargs = {
+        "model": config.CLAUDE_MODEL,
+        "max_tokens": 2000,
+        "messages": [{"role": "user", "content": prompt}],
+    }
+    if tools:
+        create_kwargs["tools"] = tools
 
-    raw_text = "".join(block.text for block in response.content if block.type == "text").strip()
+    response = client.messages.create(**create_kwargs)
+
+    text_blocks = [block.text for block in response.content if block.type == "text"]
+    # web検索ツール使用時は複数のtextブロックが混ざることがあるため、
+    # 最終的な回答が入っている最後のtextブロックのみを採用する
+    raw_text = (text_blocks[-1] if text_blocks else "").strip()
 
     # 万が一コードブロックで返ってきた場合の保険
     raw_text = raw_text.replace("```json", "").replace("```", "").strip()
