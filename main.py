@@ -160,6 +160,7 @@ def post_to_x(text):
 
     if resp.status_code not in (200, 201):
         print(f"X投稿失敗: {resp.status_code} {resp.text}")
+        print(f"デバッグ用レスポンスヘッダー: {dict(resp.headers)}")
         return None
 
     tweet_id = resp.json().get("data", {}).get("id")
