@@ -42,6 +42,9 @@ ENABLE_THREADS = os.environ.get("ENABLE_THREADS", "true").lower() == "true"
 
 DRY_RUN = os.environ.get("DRY_RUN", "false").lower() == "true"  # trueならAPIに投稿せず内容だけ表示
 
+# GitHub Actions側のcronスケジュールに応じて "normal"（9:00/19:00）か "noon"（12:00）が渡される
+POST_TIME_SLOT = os.environ.get("POST_TIME_SLOT", "normal")
+
 
 # ------------------------------------------------------------
 # 履歴管理
@@ -71,17 +74,23 @@ def generate_post(history):
 
     recent_topics = "\n".join(f"- {h['x_text']}" for h in history[-10:]) or "(まだ投稿履歴なし)"
 
-    # 投稿ローテーション: 4投稿に1本は「実験枠」（トレンド・競合を調べて書く）
+    # 投稿ローテーション: たまに「実験枠」（いつもと違う切り口を試す）を混ぜる
     post_number = len(history)
-    is_experimental = (post_number % 4 == 3)
+    is_experimental = (post_number % 5 == 4)
 
-    # 長文・短文を交互に
-    length_mode = "長文" if post_number % 2 == 0 else "短文"
-    length_instruction = (
-        "長文モード：箇条書きや改行を使い、背景説明や具体例も交えてしっかり書き込む投稿にしてください。"
-        if length_mode == "長文" else
-        "短文モード：要点を1〜2行に絞り、テンポよく読める短い投稿にしてください。"
-    )
+    # 文字数・長文/短文は時間帯（POST_TIME_SLOT）で決まる
+    # noon = 12:00の投稿（短文・280文字以内） / normal = 9:00,19:00の投稿（長文・2800文字以内）
+    x_max_chars = config.X_MAX_CHARS_BY_SLOT.get(POST_TIME_SLOT, config.X_MAX_CHARS_BY_SLOT["normal"])
+    if POST_TIME_SLOT == "noon":
+        length_instruction = (
+            "短文モード（12:00投稿）：280文字以内に収まるよう、要点を1〜2個に絞って"
+            "テンポよく読める短い投稿にしてください。箇条書きを使う場合も最小限に。"
+        )
+    else:
+        length_instruction = (
+            "長文モード（9:00/19:00投稿）：箇条書きや改行を使い、背景説明や具体例も交えて"
+            "しっかり書き込む投稿にしてください（2800文字以内）。"
+        )
 
     if is_experimental:
         mode_instruction = """
@@ -115,7 +124,7 @@ def generate_post(history):
 {recent_topics}
 
 # 出力ルール
-- X用は{config.X_MAX_CHARS}文字以内、Threads用は{config.THREADS_MAX_CHARS}文字以内
+- X用は{x_max_chars}文字以内、Threads用は{config.THREADS_MAX_CHARS}文字以内
 - X用とThreads用は同じ話題・同じ切り口で、文章の書き方だけ少し変えてよい（Threadsの方がやや会話的でもよい）
 - 最初の一文は必ず、読者の目を引く"短く簡潔な"フックにすること（長い前置きは避ける）
 - 語尾に「〜よ」は使わないこと
