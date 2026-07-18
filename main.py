@@ -79,7 +79,7 @@ def generate_post(history):
     is_experimental = (post_number % 5 == 4)
 
     # 文字数・長文/短文は時間帯（POST_TIME_SLOT）で決まる
-    # noon = 12:00の投稿（短文・280文字以内） / normal = 9:00,19:00の投稿（長文・2800文字以内）
+    # noon = 12:00の投稿（短文・280文字以内） / normal = 9:00,19:00の投稿（長文・1000文字以内）
     x_max_chars = config.X_MAX_CHARS_BY_SLOT.get(POST_TIME_SLOT, config.X_MAX_CHARS_BY_SLOT["normal"])
     if POST_TIME_SLOT == "noon":
         length_instruction = (
@@ -89,7 +89,7 @@ def generate_post(history):
     else:
         length_instruction = (
             "長文モード（9:00/19:00投稿）：箇条書きや改行を使い、背景説明や具体例も交えて"
-            "しっかり書き込む投稿にしてください（2800文字以内）。"
+            "しっかり書き込む投稿にしてください（1000文字以内）。"
         )
 
     if is_experimental:
