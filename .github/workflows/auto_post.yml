@@ -1,17 +1,24 @@
 name: Auto Post to X and Threads
 
+# 注: GitHub純正の schedule(cron) は数時間単位で実行がズレることがあるため、
+# ここでは使わない。代わりに外部サービス(cron-job.org等)から、正確な時刻に
+# workflow_dispatch(手動実行と同じ仕組み)を叩いてもらう方式にしている。
 on:
-  schedule:
-    - cron: "0 0 * * *"
-    - cron: "0 4 * * *"
-    - cron: "0 9 * * *"
-    - cron: "0 12 * * *"
   workflow_dispatch:
     inputs:
       dry_run:
         description: "true にするとAPIに実際は投稿せず内容だけ確認できます"
         required: false
         default: "false"
+      time_slot:
+        description: "どの時間帯として動かすか"
+        required: true
+        default: "morning"
+        type: choice
+        options:
+          - morning
+          - noon
+          - evening
 
 permissions:
   contents: write
@@ -41,6 +48,7 @@ jobs:
           THREADS_ACCESS_TOKEN: ${{ secrets.THREADS_ACCESS_TOKEN }}
           THREADS_USER_ID: ${{ secrets.THREADS_USER_ID }}
           DRY_RUN: ${{ github.event.inputs.dry_run || 'false' }}
+          POST_TIME_SLOT: ${{ github.event.inputs.time_slot || 'morning' }}
         run: python main.py
 
       - name: Commit updated history file
