@@ -34,7 +34,9 @@
     "x_posted": true,
     "threads_posted": false,
     "x_id": "dry_run_id",
-    "threads_id": null
+    "threads_id": null,
+    "x_metrics": null,
+    "threads_metrics": null
   },
   {
     "timestamp": "2026-07-13T13:01:49.505247",
@@ -43,7 +45,15 @@
     "x_posted": true,
     "threads_posted": false,
     "x_id": "2076653323831460193",
-    "threads_id": null
+    "threads_id": null,
+    "x_metrics": {
+      "likes": 3,
+      "retweets": 0,
+      "quotes": 0,
+      "replies": 0,
+      "impressions": 46
+    },
+    "threads_metrics": null
   },
   {
     "timestamp": "2026-07-15T13:56:54.316872",
@@ -52,7 +62,15 @@
     "x_posted": true,
     "threads_posted": false,
     "x_id": "2077391960701059558",
-    "threads_id": null
+    "threads_id": null,
+    "x_metrics": {
+      "likes": 1,
+      "retweets": 0,
+      "quotes": 0,
+      "replies": 0,
+      "impressions": 75
+    },
+    "threads_metrics": null
   },
   {
     "timestamp": "2026-07-15T14:05:25.393452",
@@ -61,7 +79,15 @@
     "x_posted": true,
     "threads_posted": false,
     "x_id": "2077394104493682826",
-    "threads_id": null
+    "threads_id": null,
+    "x_metrics": {
+      "likes": 1,
+      "retweets": 0,
+      "quotes": 0,
+      "replies": 0,
+      "impressions": 25
+    },
+    "threads_metrics": null
   },
   {
     "timestamp": "2026-07-15T15:08:45.520948",
@@ -70,7 +96,15 @@
     "x_posted": true,
     "threads_posted": false,
     "x_id": "2077410043280990256",
-    "threads_id": null
+    "threads_id": null,
+    "x_metrics": {
+      "likes": 1,
+      "retweets": 0,
+      "quotes": 0,
+      "replies": 0,
+      "impressions": 24
+    },
+    "threads_metrics": null
   },
   {
     "timestamp": "2026-07-15T16:52:45.533472",
@@ -79,7 +113,15 @@
     "x_posted": true,
     "threads_posted": false,
     "x_id": "2077436215935328746",
-    "threads_id": null
+    "threads_id": null,
+    "x_metrics": {
+      "likes": 2,
+      "retweets": 0,
+      "quotes": 0,
+      "replies": 0,
+      "impressions": 32
+    },
+    "threads_metrics": null
   },
   {
     "timestamp": "2026-07-16T07:38:30.996717",
@@ -88,7 +130,15 @@
     "x_posted": true,
     "threads_posted": false,
     "x_id": "2077659123991060974",
-    "threads_id": null
+    "threads_id": null,
+    "x_metrics": {
+      "likes": 1,
+      "retweets": 0,
+      "quotes": 0,
+      "replies": 0,
+      "impressions": 59
+    },
+    "threads_metrics": null
   },
   {
     "timestamp": "2026-07-16T15:20:59.262235",
@@ -97,7 +147,15 @@
     "x_posted": true,
     "threads_posted": false,
     "x_id": "2077775508662837316",
-    "threads_id": null
+    "threads_id": null,
+    "x_metrics": {
+      "likes": 2,
+      "retweets": 0,
+      "quotes": 0,
+      "replies": 0,
+      "impressions": 37
+    },
+    "threads_metrics": null
   },
   {
     "timestamp": "2026-07-16T16:50:17.132785",
@@ -106,7 +164,15 @@
     "x_posted": true,
     "threads_posted": false,
     "x_id": "2077797981151981906",
-    "threads_id": null
+    "threads_id": null,
+    "x_metrics": {
+      "likes": 2,
+      "retweets": 0,
+      "quotes": 0,
+      "replies": 0,
+      "impressions": 109
+    },
+    "threads_metrics": null
   },
   {
     "timestamp": "2026-07-17T07:36:00.456005",
@@ -115,7 +181,15 @@
     "x_posted": true,
     "threads_posted": false,
     "x_id": "2078020880433635598",
-    "threads_id": null
+    "threads_id": null,
+    "x_metrics": {
+      "likes": 2,
+      "retweets": 0,
+      "quotes": 0,
+      "replies": 0,
+      "impressions": 52
+    },
+    "threads_metrics": null
   },
   {
     "timestamp": "2026-07-17T10:26:39.529097",
@@ -124,7 +198,15 @@
     "x_posted": true,
     "threads_posted": false,
     "x_id": "2078063826160005277",
-    "threads_id": null
+    "threads_id": null,
+    "x_metrics": {
+      "likes": 3,
+      "retweets": 0,
+      "quotes": 0,
+      "replies": 0,
+      "impressions": 96
+    },
+    "threads_metrics": null
   },
   {
     "timestamp": "2026-07-17T12:49:19.657581",
@@ -133,7 +215,15 @@
     "x_posted": true,
     "threads_posted": false,
     "x_id": "2078099729989226993",
-    "threads_id": null
+    "threads_id": null,
+    "x_metrics": {
+      "likes": 6,
+      "retweets": 0,
+      "quotes": 0,
+      "replies": 0,
+      "impressions": 71
+    },
+    "threads_metrics": null
   },
   {
     "timestamp": "2026-07-18T07:12:08.183524",
@@ -142,7 +232,15 @@
     "x_posted": true,
     "threads_posted": false,
     "x_id": "2078377260974068156",
-    "threads_id": null
+    "threads_id": null,
+    "x_metrics": {
+      "likes": 5,
+      "retweets": 0,
+      "quotes": 0,
+      "replies": 0,
+      "impressions": 184
+    },
+    "threads_metrics": null
   },
   {
     "timestamp": "2026-07-18T09:12:27.041377",
@@ -151,7 +249,15 @@
     "x_posted": true,
     "threads_posted": false,
     "x_id": "2078407538861625496",
-    "threads_id": null
+    "threads_id": null,
+    "x_metrics": {
+      "likes": 5,
+      "retweets": 0,
+      "quotes": 0,
+      "replies": 0,
+      "impressions": 124
+    },
+    "threads_metrics": null
   },
   {
     "timestamp": "2026-07-18T12:03:18.475532",
@@ -160,7 +266,15 @@
     "x_posted": true,
     "threads_posted": false,
     "x_id": "2078450536668610738",
-    "threads_id": null
+    "threads_id": null,
+    "x_metrics": {
+      "likes": 6,
+      "retweets": 0,
+      "quotes": 0,
+      "replies": 0,
+      "impressions": 277
+    },
+    "threads_metrics": null
   },
   {
     "timestamp": "2026-07-18T12:16:16.804979",
@@ -169,7 +283,15 @@
     "x_posted": true,
     "threads_posted": false,
     "x_id": "2078453801196159270",
-    "threads_id": null
+    "threads_id": null,
+    "x_metrics": {
+      "likes": 6,
+      "retweets": 0,
+      "quotes": 0,
+      "replies": 0,
+      "impressions": 111
+    },
+    "threads_metrics": null
   },
   {
     "timestamp": "2026-07-18T15:32:46.573986",
@@ -178,7 +300,15 @@
     "x_posted": true,
     "threads_posted": false,
     "x_id": "2078503250983113112",
-    "threads_id": null
+    "threads_id": null,
+    "x_metrics": {
+      "likes": 6,
+      "retweets": 0,
+      "quotes": 0,
+      "replies": 0,
+      "impressions": 378
+    },
+    "threads_metrics": null
   },
   {
     "timestamp": "2026-07-19T07:52:36.766792",
@@ -187,7 +317,15 @@
     "x_posted": true,
     "threads_posted": false,
     "x_id": "2078749835016950117",
-    "threads_id": null
+    "threads_id": null,
+    "x_metrics": {
+      "likes": 5,
+      "retweets": 0,
+      "quotes": 0,
+      "replies": 0,
+      "impressions": 137
+    },
+    "threads_metrics": null
   },
   {
     "timestamp": "2026-07-19T10:07:01.375779",
@@ -196,7 +334,15 @@
     "x_posted": true,
     "threads_posted": false,
     "x_id": "2078783660392669540",
-    "threads_id": null
+    "threads_id": null,
+    "x_metrics": {
+      "likes": 2,
+      "retweets": 0,
+      "quotes": 0,
+      "replies": 0,
+      "impressions": 56
+    },
+    "threads_metrics": null
   },
   {
     "timestamp": "2026-07-19T12:07:14.214978",
@@ -205,7 +351,15 @@
     "x_posted": true,
     "threads_posted": false,
     "x_id": "2078813913219571889",
-    "threads_id": null
+    "threads_id": null,
+    "x_metrics": {
+      "likes": 1,
+      "retweets": 0,
+      "quotes": 0,
+      "replies": 0,
+      "impressions": 63
+    },
+    "threads_metrics": null
   },
   {
     "timestamp": "2026-07-19T12:48:31.232415",
@@ -214,7 +368,15 @@
     "x_posted": true,
     "threads_posted": false,
     "x_id": "2078824302590468548",
-    "threads_id": null
+    "threads_id": null,
+    "x_metrics": {
+      "likes": 1,
+      "retweets": 0,
+      "quotes": 0,
+      "replies": 0,
+      "impressions": 71
+    },
+    "threads_metrics": null
   },
   {
     "timestamp": "2026-07-20T03:44:52.032461",
@@ -223,6 +385,14 @@
     "x_posted": true,
     "threads_posted": false,
     "x_id": "2079049875593801962",
-    "threads_id": null
+    "threads_id": null,
+    "x_metrics": {
+      "likes": 1,
+      "retweets": 0,
+      "quotes": 0,
+      "replies": 0,
+      "impressions": 77
+    },
+    "threads_metrics": null
   }
 ]
