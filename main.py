@@ -42,8 +42,8 @@ ENABLE_THREADS = os.environ.get("ENABLE_THREADS", "true").lower() == "true"
 
 DRY_RUN = os.environ.get("DRY_RUN", "false").lower() == "true"  # trueならAPIに投稿せず内容だけ表示
 
-# GitHub Actions側のcronスケジュールに応じて "normal"（9:00/19:00）か "noon"（12:00）が渡される
-POST_TIME_SLOT = os.environ.get("POST_TIME_SLOT", "normal")
+# GitHub Actions側のcronスケジュールに応じて "morning"(9:00) "noon"(12:00) "evening"(19:00) が渡される
+POST_TIME_SLOT = os.environ.get("POST_TIME_SLOT", "morning")
 
 
 # ------------------------------------------------------------
@@ -70,25 +70,29 @@ def save_history(history):
 # Claude で投稿文を生成
 # ------------------------------------------------------------
 def generate_post(history):
+    """9:00 / 12:00 / 19:00 共通: 単発投稿を1つ生成する"""
     client = Anthropic(api_key=ANTHROPIC_API_KEY)
 
-    recent_topics = "\n".join(f"- {h['x_text']}" for h in history[-10:]) or "(まだ投稿履歴なし)"
+    recent_topics = "\n".join(f"- {h.get('x_text', '')}" for h in history[-10:]) or "(まだ投稿履歴なし)"
 
-    # 投稿ローテーション: たまに「実験枠」（いつもと違う切り口を試す）を混ぜる
     post_number = len(history)
     is_experimental = (post_number % 5 == 4)
 
-    # 文字数・長文/短文は時間帯（POST_TIME_SLOT）で決まる
-    # noon = 12:00の投稿（短文・280文字以内） / normal = 9:00,19:00の投稿（長文・1000文字以内）
-    x_max_chars = config.X_MAX_CHARS_BY_SLOT.get(POST_TIME_SLOT, config.X_MAX_CHARS_BY_SLOT["normal"])
+    hook_types = [
+        "断言リスト型", "対比・逆説型", "絞り込み型", "裏技提示型", "再現エピソード型",
+        "理不尽指摘型", "ランキング型", "警鐘型", "正論反論・共感型", "矛盾追及型",
+    ]
+    hook_type_instruction = f"今回のフックは特に「{hook_types[post_number % len(hook_types)]}」を使って書いてください。"
+
+    x_max_chars = config.X_MAX_CHARS_BY_SLOT.get(POST_TIME_SLOT, config.X_MAX_CHARS_BY_SLOT["morning"])
     if POST_TIME_SLOT == "noon":
         length_instruction = (
-            "短文モード（12:00投稿）：280文字以内に収まるよう、要点を1〜2個に絞って"
+            "短文モード（12:00投稿）：250文字以内に収まるよう、要点を1〜2個に絞って"
             "テンポよく読める短い投稿にしてください。箇条書きを使う場合も最小限に。"
         )
     else:
         length_instruction = (
-            "長文モード（9:00/19:00投稿）：箇条書きや改行を使い、背景説明や具体例も交えて"
+            "長文モード（8:00/19:00投稿）：箇条書きや改行を使い、背景説明や具体例も交えて"
             "しっかり書き込む投稿にしてください（1000文字以内）。"
         )
 
@@ -98,7 +102,7 @@ def generate_post(history):
 - 直近話題になっていそうなキャリア・転職関連のトピックがあれば触れてよい（ただし断定的な最新情報は避け、
   一般的に言われていることの範囲で書く）
 - 定番の型に縛られず、新しい切り口・フォーマットを試してよい
-- いつもの3本とは違うテイストにすることを意識する
+- いつもの投稿とは違うテイストにすることを意識する
 """
     else:
         mode_instruction = "今回は「定番枠」の投稿です。テーマ内で定義されている型（求人票の翻訳・エージェントの裏側・勘違いの訂正など）から1つ選んで書いてください。"
@@ -119,6 +123,7 @@ def generate_post(history):
 
 # 今回のフォーマット指示
 {length_instruction}
+{hook_type_instruction}
 
 # 直近の投稿ネタ（このネタとは違う切り口・話題にすること）
 {recent_topics}
@@ -142,8 +147,6 @@ def generate_post(history):
 
     text_blocks = [block.text for block in response.content if block.type == "text"]
     raw_text = (text_blocks[-1] if text_blocks else "").strip()
-
-    # 万が一コードブロックで返ってきた場合の保険
     raw_text = raw_text.replace("```json", "").replace("```", "").strip()
 
     try:
@@ -226,6 +229,9 @@ def post_to_threads(text):
 # メイン処理
 # ------------------------------------------------------------
 def main():
+    now_utc = datetime.utcnow()
+    print(f"[実行時刻デバッグ] UTC: {now_utc.isoformat()} / POST_TIME_SLOT: {POST_TIME_SLOT}")
+
     if not ANTHROPIC_API_KEY:
         print("ANTHROPIC_API_KEY が設定されていません。GitHub Secretsを確認してください。")
         sys.exit(1)
@@ -258,7 +264,8 @@ def main():
     # 履歴に追加（投稿の成否に関わらずネタの重複防止のために記録。
     # x_id / threads_id は週次レポートで指標を取得する際のキーになる）
     history.append({
-        "timestamp": datetime.utcnow().isoformat(),
+        "timestamp": now_utc.isoformat(),
+        "post_time_slot": POST_TIME_SLOT,
         "x_text": x_text,
         "threads_text": threads_text,
         "x_posted": x_id is not None,
