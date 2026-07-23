@@ -42,7 +42,7 @@ ENABLE_THREADS = os.environ.get("ENABLE_THREADS", "true").lower() == "true"
 
 DRY_RUN = os.environ.get("DRY_RUN", "false").lower() == "true"  # trueならAPIに投稿せず内容だけ表示
 
-# GitHub Actions側のcronスケジュールに応じて "morning"(9:00) "noon"(12:00) "evening"(19:00) が渡される
+# GitHub Actions側のcronスケジュールに応じて "morning"(8:00) "noon"(12:00) "evening"(19:00) が渡される
 POST_TIME_SLOT = os.environ.get("POST_TIME_SLOT", "morning")
 
 
@@ -70,7 +70,7 @@ def save_history(history):
 # Claude で投稿文を生成
 # ------------------------------------------------------------
 def generate_post(history):
-    """9:00 / 12:00 / 19:00 共通: 単発投稿を1つ生成する"""
+    """8:00 / 12:00 / 19:00 共通: 単発投稿を1つ生成する"""
     client = Anthropic(api_key=ANTHROPIC_API_KEY)
 
     recent_topics = "\n".join(f"- {h.get('x_text', '')}" for h in history[-10:]) or "(まだ投稿履歴なし)"
@@ -87,7 +87,7 @@ def generate_post(history):
     x_max_chars = config.X_MAX_CHARS_BY_SLOT.get(POST_TIME_SLOT, config.X_MAX_CHARS_BY_SLOT["morning"])
     if POST_TIME_SLOT == "noon":
         length_instruction = (
-            "短文モード（12:00投稿）：250文字以内に収まるよう、要点を1〜2個に絞って"
+            "短文モード（12:00投稿）：200文字以内に収まるよう、要点を1〜2個に絞って"
             "テンポよく読める短い投稿にしてください。箇条書きを使う場合も最小限に。"
         )
     else:
@@ -107,6 +107,20 @@ def generate_post(history):
     else:
         mode_instruction = "今回は「定番枠」の投稿です。テーマ内で定義されている型（求人票の翻訳・エージェントの裏側・勘違いの訂正など）から1つ選んで書いてください。"
 
+    # 8:00の投稿のみ、Web検索でトレンド分析してから書く（1日1回だけ、追加コストを抑えるため）
+    use_trend_research = (POST_TIME_SLOT == "morning")
+    if use_trend_research:
+        trend_instruction = """
+# トレンドリサーチの指示（今回は必須）
+書く前に、「転職」「退職」「面接対策」などのキーワードでWeb検索し、
+今よく読まれている・反応が良さそうな投稿にどんな傾向があるか調べてください。
+
+重要：バズっている投稿の文章量、テーマ、内容、言い回しをなるべく取り入れ、少しだけ内容のアレンジを加えてください。
+全く同じ文章はダメです。
+"""
+    else:
+        trend_instruction = ""
+
     prompt = f"""あなたはSNS運用担当です。以下の条件でX(Twitter)とThreads向けの投稿文をそれぞれ作成してください。
 
 # テーマ・ターゲット・裏コンセプト
@@ -120,7 +134,7 @@ def generate_post(history):
 
 # 今回の投稿タイプ
 {mode_instruction}
-
+{trend_instruction}
 # 今回のフォーマット指示
 {length_instruction}
 {hook_type_instruction}
@@ -139,11 +153,15 @@ def generate_post(history):
 {{"x_text": "Xに投稿する文章", "threads_text": "Threadsに投稿する文章"}}
 """
 
-    response = client.messages.create(
-        model=config.CLAUDE_MODEL,
-        max_tokens=4096,
-        messages=[{"role": "user", "content": prompt}],
-    )
+    create_kwargs = {
+        "model": config.CLAUDE_MODEL,
+        "max_tokens": 4096,
+        "messages": [{"role": "user", "content": prompt}],
+    }
+    if use_trend_research:
+        create_kwargs["tools"] = [{"type": "web_search_20250305", "name": "web_search", "max_uses": 3}]
+
+    response = client.messages.create(**create_kwargs)
 
     text_blocks = [block.text for block in response.content if block.type == "text"]
     raw_text = (text_blocks[-1] if text_blocks else "").strip()
