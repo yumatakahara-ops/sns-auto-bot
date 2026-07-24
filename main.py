@@ -42,7 +42,7 @@ ENABLE_THREADS = os.environ.get("ENABLE_THREADS", "true").lower() == "true"
 
 DRY_RUN = os.environ.get("DRY_RUN", "false").lower() == "true"  # trueならAPIに投稿せず内容だけ表示
 
-# GitHub Actions側のcronスケジュールに応じて "morning"(8:00) "noon"(12:00) "evening"(19:00) が渡される
+# GitHub Actions側から "morning"(8:00) "noon"(12:00) "evening"(19:00) が渡される
 POST_TIME_SLOT = os.environ.get("POST_TIME_SLOT", "morning")
 
 
@@ -73,7 +73,7 @@ def generate_post(history):
     """8:00 / 12:00 / 19:00 共通: 単発投稿を1つ生成する"""
     client = Anthropic(api_key=ANTHROPIC_API_KEY)
 
-    recent_topics = "\n".join(f"- {h.get('x_text', '')}" for h in history[-20:]) or "(まだ投稿履歴なし)"
+    recent_topics = "\n".join(f"- {h.get('x_text', '')}" for h in history[-30:]) or "(まだ投稿履歴なし)"
 
     post_number = len(history)
     is_experimental = (post_number % 5 == 4)
@@ -81,13 +81,14 @@ def generate_post(history):
     hook_types = [
         "断言リスト型", "対比・逆説型", "絞り込み型", "裏技提示型", "再現エピソード型",
         "理不尽指摘型", "ランキング型", "警鐘型", "正論反論・共感型", "矛盾追及型",
+        "認識のズレ型",
     ]
     hook_type_instruction = f"今回のフックは特に「{hook_types[post_number % len(hook_types)]}」を使って書いてください。"
 
     x_max_chars = config.X_MAX_CHARS_BY_SLOT.get(POST_TIME_SLOT, config.X_MAX_CHARS_BY_SLOT["morning"])
     if POST_TIME_SLOT == "noon":
         length_instruction = (
-            "短文モード（12:00投稿）：200文字以内に収まるよう、要点を1〜2個に絞って"
+            "短文モード（12:00投稿）：250文字以内に収まるよう、要点を1〜2個に絞って"
             "テンポよく読める短い投稿にしてください。箇条書きを使う場合も最小限に。"
         )
     else:
@@ -99,7 +100,8 @@ def generate_post(history):
     if is_experimental:
         mode_instruction = """
 今回は「実験枠」の投稿です。以下を踏まえて、いつもの型とは少し違う切り口で書いてください。
-- 直近話題になっていそうなキャリア・転職関連のトピックがあれば触れてよい
+- 直近話題になっていそうなキャリア・転職関連のトピックがあれば触れてよい（ただし断定的な最新情報は避け、
+  一般的に言われていることの範囲で書く）
 - 定番の型に縛られず、新しい切り口・フォーマットを試してよい
 - いつもの投稿とは違うテイストにすることを意識する
 """
@@ -113,7 +115,10 @@ def generate_post(history):
 # トレンドリサーチの指示（今回は必須）
 書く前に、「転職」「退職」「面接対策」などのキーワードでWeb検索し、
 今よく読まれている・反応が良さそうな投稿にどんな傾向があるか調べてください。
-重要：閲覧数が1000以上の投稿の文章量、文章の構造、テーマ、言い回しをほとんど真似し、少しだけ内容のアレンジを加えてください。
+
+重要：検索結果の文章・フレーズ・構成をそのまま使ってはいけません。
+あくまで「今どんな切り口・感情・テーマが反応を得やすいか」という"傾向"だけを掴み、
+それを参考にしながら、テーマ・トーン・ガードレールに沿った完全にオリジナルの文章を書いてください。
 """
     else:
         trend_instruction = ""
@@ -144,6 +149,8 @@ def generate_post(history):
 {recent_topics}
 
 # 出力ルール
+- 出力する前に、テーマ内の「投稿完成後、必ずセルフチェックする5つの質問」に沿って
+  必ず自己チェックし、当てはまらない場合は書き直してから出力すること
 - X用は{x_max_chars}文字以内、Threads用は{config.THREADS_MAX_CHARS}文字以内
 - X用とThreads用は同じ話題・同じ切り口で、文章の書き方だけ少し変えてよい（Threadsの方がやや会話的でもよい）
 - 最初の一文は必ず、読者の目を引く"短く簡潔な"フックにすること（長い前置きは避ける）
