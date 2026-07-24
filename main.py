@@ -85,6 +85,14 @@ def generate_post(history):
     ]
     hook_type_instruction = f"今回のフックは特に「{hook_types[post_number % len(hook_types)]}」を使って書いてください。"
 
+    body_formats = [
+        "A. 見出し＋箇条書き型（【】の見出しを2〜4個立てて箇条書きで展開する）",
+        "B. 地の文ストーリー型（見出し・記号は使わず、エピソードを時系列の地の文だけで語る）",
+        "C. 短文連打型（見出し・箇条書きを使わず、断定的な短い文を改行で重ねていく）",
+        "D. Q&A型（「よくある質問：〇〇？」→「答え：△△」の形式で進める）",
+    ]
+    body_format_instruction = f"今回の本文構成は必ず「{body_formats[post_number % len(body_formats)]}」にしてください。直近の投稿と同じ構成を繰り返さないこと。"
+
     x_max_chars = config.X_MAX_CHARS_BY_SLOT.get(POST_TIME_SLOT, config.X_MAX_CHARS_BY_SLOT["morning"])
     if POST_TIME_SLOT == "noon":
         length_instruction = (
@@ -94,7 +102,7 @@ def generate_post(history):
     else:
         length_instruction = (
             "長文モード（8:00/19:00投稿）：箇条書きや改行を使い、背景説明や具体例も交えて"
-            "しっかり書き込む投稿にしてください（1000文字以内）。"
+            "しっかり書き込む投稿にしてください（800文字以内）。"
         )
 
     if is_experimental:
@@ -119,6 +127,7 @@ def generate_post(history):
 重要：検索結果の文章・フレーズ・構成をそのまま使ってはいけません。
 あくまで「今どんな切り口・感情・テーマが反応を得やすいか」という"傾向"だけを掴み、
 それを参考にしながら、テーマ・トーン・ガードレールに沿った完全にオリジナルの文章を書いてください。
+他人の投稿を要約・言い換えただけの文章は禁止です。
 """
     else:
         trend_instruction = ""
@@ -140,9 +149,10 @@ def generate_post(history):
 # 今回のフォーマット指示
 {length_instruction}
 {hook_type_instruction}
+{body_format_instruction}
 
 # 直近の投稿ネタ（重要：この中で使われている具体例・キーワード・エピソードは、
-# 今回は絶対に再利用しないこと。特に「アットホームな職場です」のような定番の例文は、
+# 今回は絶対に再利用しないこと。
 # 一度使ったら最低2週間は別の例に差し替えること。テーマ自体が近くても、
 # 切り口・具体例・数字が違えば良いが、同じ具体例の使い回しは「またこれか」と
 # 思われる原因になるため厳禁）
@@ -154,7 +164,7 @@ def generate_post(history):
 - X用は{x_max_chars}文字以内、Threads用は{config.THREADS_MAX_CHARS}文字以内
 - X用とThreads用は同じ話題・同じ切り口で、文章の書き方だけ少し変えてよい（Threadsの方がやや会話的でもよい）
 - 最初の一文は必ず、読者の目を引く"短く簡潔な"フックにすること（長い前置きは避ける）
-- 語尾に「〜よ」は使わないこと
+- 語尾は全て断定形
 - ハッシュタグは一切つけないこと
 - 必ず以下のJSON形式のみで出力すること。前置きや説明文、コードブロック記号（```）は一切つけないこと。
 
