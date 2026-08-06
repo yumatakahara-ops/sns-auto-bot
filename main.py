@@ -66,16 +66,32 @@ def save_history(history):
         json.dump(trimmed, f, ensure_ascii=False, indent=2)
 
 
+def next_post_number(history):
+    """次に使う投稿番号（連番）を返す。
+
+    フックの型・本文構成・実験枠のローテーションはこの番号を基準に決まる。
+    以前は len(history) を番号に使っていたが、履歴は HISTORY_KEEP_LAST 件で
+    切り詰められるため、件数が上限に達すると番号が固定されてしまい、
+    同じ型の投稿ばかりになる不具合があった。
+    各エントリに保存した seq の最大値+1 を使えば、履歴が切り詰められても
+    残るのは連番が大きい方なので、番号は正しく単調増加し続ける。
+    """
+    return max((h.get("seq", -1) for h in history), default=-1) + 1
+
+
 # ------------------------------------------------------------
 # Claude で投稿文を生成
 # ------------------------------------------------------------
-def generate_post(history):
-    """8:00 / 12:00 / 19:00 共通: 単発投稿を1つ生成する"""
+def generate_post(history, post_number):
+    """8:00 / 12:00 / 19:00 共通: 単発投稿を1つ生成する
+
+    post_number: ローテーション（フックの型・本文構成・実験枠）を決める連番。
+    切り詰めの影響を受けない next_post_number() の値を呼び出し側から渡す。
+    """
     client = Anthropic(api_key=ANTHROPIC_API_KEY)
 
     recent_topics = "\n".join(f"- {h.get('x_text', '')}" for h in history[-30:]) or "(まだ投稿履歴なし)"
 
-    post_number = len(history)
     is_experimental = (post_number % 5 == 4)
 
     hook_types = [
@@ -274,8 +290,13 @@ def main():
 
     history = load_history()
 
+    # ローテーション用の連番を決める（len(history) は使わない。
+    # 履歴が切り詰められると番号が固定される不具合の対策）
+    post_number = next_post_number(history)
+    print(f"[ローテーションデバッグ] post_number: {post_number}")
+
     print("Claudeで投稿文を生成中...")
-    x_text, threads_text = generate_post(history)
+    x_text, threads_text = generate_post(history, post_number)
 
     print("---- X用投稿文 ----")
     print(x_text)
@@ -298,8 +319,10 @@ def main():
             threads_id = post_to_threads(threads_text)
 
     # 履歴に追加（投稿の成否に関わらずネタの重複防止のために記録。
-    # x_id / threads_id は週次レポートで指標を取得する際のキーになる）
+    # x_id / threads_id は週次レポートで指標を取得する際のキーになる。
+    # seq はローテーション用の連番。次回の next_post_number() がこれを基準に +1 する）
     history.append({
+        "seq": post_number,
         "timestamp": now_utc.isoformat(),
         "post_time_slot": POST_TIME_SLOT,
         "x_text": x_text,
