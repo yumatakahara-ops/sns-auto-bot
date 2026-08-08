@@ -189,26 +189,47 @@ def generate_post(history, post_number):
 
     create_kwargs = {
         "model": config.CLAUDE_MODEL,
-        "max_tokens": 4096,
+        "max_tokens": 8192,  # 出力は短いが、切り詰めで空応答になるのを防ぐため余裕を持たせる（課金は実際の出力分のみ）
         "messages": [{"role": "user", "content": prompt}],
     }
     if use_trend_research:
         create_kwargs["tools"] = [{"type": "web_search_20250305", "name": "web_search", "max_uses": 3}]
 
-    response = client.messages.create(**create_kwargs)
+    # 空応答・パース失敗に備えて最大3回までリトライする
+    last_error = None
+    last_raw = ""
+    for attempt in range(1, 4):
+        response = client.messages.create(**create_kwargs)
+        print(f"[生成デバッグ] attempt {attempt} / stop_reason: {response.stop_reason}")
 
-    text_blocks = [block.text for block in response.content if block.type == "text"]
-    raw_text = (text_blocks[-1] if text_blocks else "").strip()
-    raw_text = raw_text.replace("```json", "").replace("```", "").strip()
+        # 最後の1ブロックだけ拾うと空になることがあるため、全テキストブロックを結合する
+        text_blocks = [block.text for block in response.content if block.type == "text"]
+        raw_text = "".join(text_blocks).strip()
+        raw_text = raw_text.replace("```json", "").replace("```", "").strip()
+        last_raw = raw_text
 
-    try:
-        data = json.loads(raw_text)
-    except json.JSONDecodeError as e:
-        print("Claudeの出力がJSONとしてパースできませんでした:")
-        print(raw_text)
-        raise e
+        # 前後によけいな文章が付いていても { ... } の部分だけ取り出す
+        start = raw_text.find("{")
+        end = raw_text.rfind("}")
+        candidate = raw_text[start:end + 1] if (start != -1 and end > start) else raw_text
 
-    return data["x_text"], data["threads_text"]
+        if not candidate:
+            last_error = ValueError("空のレスポンスでした")
+            print(f"[生成デバッグ] attempt {attempt}: 空のレスポンス。リトライします。")
+            continue
+
+        try:
+            data = json.loads(candidate)
+            return data["x_text"], data["threads_text"]
+        except (json.JSONDecodeError, KeyError) as e:
+            last_error = e
+            print(f"[生成デバッグ] attempt {attempt}: パース失敗（{e}）。リトライします。")
+            continue
+
+    # 3回試しても失敗したときだけ、生の出力を出して例外を投げる
+    print("Claudeの出力がJSONとしてパースできませんでした（最後の生出力）:")
+    print(last_raw)
+    raise last_error
 
 
 # ------------------------------------------------------------
