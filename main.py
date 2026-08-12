@@ -66,32 +66,16 @@ def save_history(history):
         json.dump(trimmed, f, ensure_ascii=False, indent=2)
 
 
-def next_post_number(history):
-    """次に使う投稿番号（連番）を返す。
-
-    フックの型・本文構成・実験枠のローテーションはこの番号を基準に決まる。
-    以前は len(history) を番号に使っていたが、履歴は HISTORY_KEEP_LAST 件で
-    切り詰められるため、件数が上限に達すると番号が固定されてしまい、
-    同じ型の投稿ばかりになる不具合があった。
-    各エントリに保存した seq の最大値+1 を使えば、履歴が切り詰められても
-    残るのは連番が大きい方なので、番号は正しく単調増加し続ける。
-    """
-    return max((h.get("seq", -1) for h in history), default=-1) + 1
-
-
 # ------------------------------------------------------------
 # Claude で投稿文を生成
 # ------------------------------------------------------------
-def generate_post(history, post_number):
-    """8:00 / 12:00 / 19:00 共通: 単発投稿を1つ生成する
-
-    post_number: ローテーション（フックの型・本文構成・実験枠）を決める連番。
-    切り詰めの影響を受けない next_post_number() の値を呼び出し側から渡す。
-    """
+def generate_post(history):
+    """8:00 / 12:00 / 19:00 共通: 単発投稿を1つ生成する"""
     client = Anthropic(api_key=ANTHROPIC_API_KEY)
 
     recent_topics = "\n".join(f"- {h.get('x_text', '')}" for h in history[-30:]) or "(まだ投稿履歴なし)"
 
+    post_number = len(history)
     is_experimental = (post_number % 5 == 4)
 
     hook_types = [
@@ -118,7 +102,7 @@ def generate_post(history, post_number):
     else:
         length_instruction = (
             "長文モード（8:00/19:00投稿）：箇条書きや改行を使い、背景説明や具体例も交えて"
-            "しっかり書き込む投稿にしてください（800文字以内）。"
+            "しっかり書き込む投稿にしてください（1000文字以内）。"
         )
 
     if is_experimental:
@@ -168,7 +152,7 @@ def generate_post(history, post_number):
 {body_format_instruction}
 
 # 直近の投稿ネタ（重要：この中で使われている具体例・キーワード・エピソードは、
-# 今回は絶対に再利用しないこと。
+# 今回は絶対に再利用しないこと。特に「アットホームな職場です」のような定番の例文は、
 # 一度使ったら最低2週間は別の例に差し替えること。テーマ自体が近くても、
 # 切り口・具体例・数字が違えば良いが、同じ具体例の使い回しは「またこれか」と
 # 思われる原因になるため厳禁）
@@ -180,7 +164,7 @@ def generate_post(history, post_number):
 - X用は{x_max_chars}文字以内、Threads用は{config.THREADS_MAX_CHARS}文字以内
 - X用とThreads用は同じ話題・同じ切り口で、文章の書き方だけ少し変えてよい（Threadsの方がやや会話的でもよい）
 - 最初の一文は必ず、読者の目を引く"短く簡潔な"フックにすること（長い前置きは避ける）
-- 語尾は全て断定形
+- 語尾に「〜よ」は使わないこと
 - ハッシュタグは一切つけないこと
 - 必ず以下のJSON形式のみで出力すること。前置きや説明文、コードブロック記号（```）は一切つけないこと。
 
@@ -189,47 +173,26 @@ def generate_post(history, post_number):
 
     create_kwargs = {
         "model": config.CLAUDE_MODEL,
-        "max_tokens": 8192,  # 出力は短いが、切り詰めで空応答になるのを防ぐため余裕を持たせる（課金は実際の出力分のみ）
+        "max_tokens": 4096,
         "messages": [{"role": "user", "content": prompt}],
     }
     if use_trend_research:
         create_kwargs["tools"] = [{"type": "web_search_20250305", "name": "web_search", "max_uses": 3}]
 
-    # 空応答・パース失敗に備えて最大3回までリトライする
-    last_error = None
-    last_raw = ""
-    for attempt in range(1, 4):
-        response = client.messages.create(**create_kwargs)
-        print(f"[生成デバッグ] attempt {attempt} / stop_reason: {response.stop_reason}")
+    response = client.messages.create(**create_kwargs)
 
-        # 最後の1ブロックだけ拾うと空になることがあるため、全テキストブロックを結合する
-        text_blocks = [block.text for block in response.content if block.type == "text"]
-        raw_text = "".join(text_blocks).strip()
-        raw_text = raw_text.replace("```json", "").replace("```", "").strip()
-        last_raw = raw_text
+    text_blocks = [block.text for block in response.content if block.type == "text"]
+    raw_text = (text_blocks[-1] if text_blocks else "").strip()
+    raw_text = raw_text.replace("```json", "").replace("```", "").strip()
 
-        # 前後によけいな文章が付いていても { ... } の部分だけ取り出す
-        start = raw_text.find("{")
-        end = raw_text.rfind("}")
-        candidate = raw_text[start:end + 1] if (start != -1 and end > start) else raw_text
+    try:
+        data = json.loads(raw_text)
+    except json.JSONDecodeError as e:
+        print("Claudeの出力がJSONとしてパースできませんでした:")
+        print(raw_text)
+        raise e
 
-        if not candidate:
-            last_error = ValueError("空のレスポンスでした")
-            print(f"[生成デバッグ] attempt {attempt}: 空のレスポンス。リトライします。")
-            continue
-
-        try:
-            data = json.loads(candidate)
-            return data["x_text"], data["threads_text"]
-        except (json.JSONDecodeError, KeyError) as e:
-            last_error = e
-            print(f"[生成デバッグ] attempt {attempt}: パース失敗（{e}）。リトライします。")
-            continue
-
-    # 3回試しても失敗したときだけ、生の出力を出して例外を投げる
-    print("Claudeの出力がJSONとしてパースできませんでした（最後の生出力）:")
-    print(last_raw)
-    raise last_error
+    return data["x_text"], data["threads_text"]
 
 
 # ------------------------------------------------------------
@@ -311,13 +274,8 @@ def main():
 
     history = load_history()
 
-    # ローテーション用の連番を決める（len(history) は使わない。
-    # 履歴が切り詰められると番号が固定される不具合の対策）
-    post_number = next_post_number(history)
-    print(f"[ローテーションデバッグ] post_number: {post_number}")
-
     print("Claudeで投稿文を生成中...")
-    x_text, threads_text = generate_post(history, post_number)
+    x_text, threads_text = generate_post(history)
 
     print("---- X用投稿文 ----")
     print(x_text)
@@ -340,10 +298,8 @@ def main():
             threads_id = post_to_threads(threads_text)
 
     # 履歴に追加（投稿の成否に関わらずネタの重複防止のために記録。
-    # x_id / threads_id は週次レポートで指標を取得する際のキーになる。
-    # seq はローテーション用の連番。次回の next_post_number() がこれを基準に +1 する）
+    # x_id / threads_id は週次レポートで指標を取得する際のキーになる）
     history.append({
-        "seq": post_number,
         "timestamp": now_utc.isoformat(),
         "post_time_slot": POST_TIME_SLOT,
         "x_text": x_text,
